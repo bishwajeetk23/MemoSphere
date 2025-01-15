@@ -6,6 +6,8 @@ import jwt from "jsonwebtoken";
 import connectDB from "./db";
 import {  JWT_SECRET } from "./constant";
 import { ContentModel } from "./models/content.models";
+import { LinkModel } from "./models/link.models";
+import { random } from "./utils/hashGenerator";
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -123,14 +125,93 @@ app.get('/api/v1/content',auth,async (req,res)=>{
     }
 });
 // delete content end point
-app.delete('',auth,()=>{
-
+app.delete('/api/v1/content',auth,async (req,res)=>{
+    const contentId = req.body.contentId;
+    try {
+        await ContentModel.deleteMany({
+            _id:contentId,
+            // @ts-ignore
+            userId: req.userId
+        });
+        res.json({
+            message:"Deleted successfully!!!"
+        });
+    } catch (error) {
+        res.status(411).json({
+            message: "content not deleted. Something went wrong!!!"
+        });
+    }
 });
 // share endpoint
-app.get('',auth,()=>{});
+// this api is voilating single responsibility principle
+app.post('/api/v1/brain/share',auth,async (req,res)=>{
+    const share = req.body.share;
+    if(share){
+            const ExistingLink = await LinkModel.findOne({
+                // @ts-ignore
+                userId:req.userId,
+            });
+            if(ExistingLink){
+                res.json({
+                    link: '/api/v1/brain/'+ExistingLink.hash
+                });
+                return;
+            }
+        const hash = random(10);
+        await LinkModel.create({
+            // @ts-ignore
+            userId:req.userId,
+            hash: hash
+        });
+        res.json({
+            link: '/api/v1/brain/'+hash
+        });
+    }else{
+        
+        await LinkModel.deleteOne({
+            // @ts-ignore
+            userId:req.userId,
+        });
+        res.json({
+           message: "Share disabled!!!"
+        });
+    }
+});
 
 // fetch others links
-app.get('',auth,()=>{
+// this api gives data showing to world without sign in. 
+app.get('/api/v1/brain/:shareLink',async (req,res)=>{
+    const hash = req.params.shareLink;
+    const link = await LinkModel.findOne({
+        hash
+    })
+    if(!link){
+        res.status(411).json({
+            message:"invalid link"
+        });
+        return;
+    }
+    // userId content using hash code 
+    const content = await ContentModel.find({
+        userId:link.userId
+    });
+    // getting username using userid from hash
+    const user = await UserModel.findOne({
+        _id:link.userId
+    });
+
+    if(!user){
+        res.status(411).json({
+            message:"user not found, error should ideally not happen"
+        });
+        return;
+    }
+
+    // (?.) is called optional chaining
+    res.json({
+        username:user.username,
+        content:content,
+    });
 
 });
 
