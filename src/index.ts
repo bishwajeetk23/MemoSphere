@@ -1,23 +1,30 @@
 import express from "express";
-import dotenv from 'dotenv';
-import { auth } from "./middlewares/auth";
-import { UserModel } from "./models/user.models";
 import jwt from "jsonwebtoken";
+import dotenv from 'dotenv';
+
+import { UserModel } from "./models/user.models";
+import { LinkModel } from "./models/link.models";
+import { ContentModel } from "./models/content.models";
+
+import { auth } from "./middlewares/auth";
 import connectDB from "./db";
 import {  JWT_SECRET } from "./constant";
-import { ContentModel } from "./models/content.models";
-import { LinkModel } from "./models/link.models";
 import { random } from "./utils/hashGenerator";
+
 dotenv.config();
+
 const app = express();
+const port : string = process.env.PORT || '3000';
+
+
 app.use(express.json());
+
 connectDB().then((error)=>{
 
 }).catch((error)=>{
     console.log("Mongo db connection failed !!!", error);
-    
 });
-const port : string = process.env.PORT || '3000';
+
 app.get('/',(req,res)=>{
     res.send("Server is running");
 })
